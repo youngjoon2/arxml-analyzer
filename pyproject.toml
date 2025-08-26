@@ -1,0 +1,41 @@
+[project]
+name = "arxml-analyzer"
+version = "1.0.0"
+description = "AUTOSAR ARXML file analyzer and visualization CLI tool"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.1.0",
+    "lxml>=4.9.0",
+    "pandas>=2.0.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "jsonschema>=4.0.0",
+    "xmlschema>=2.0.0",
+    "tqdm>=4.65.0",
+    "cachetools>=5.3.0",
+    "colorlog>=6.7.0",
+    "tabulate>=0.9.0",
+    "markdown>=3.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "isort>=5.12.0",
+    "ipython>=8.12.0",
+    "pre-commit>=3.3.0",
+]
+
+[project.scripts]
+arxml-analyzer = "arxml_analyzer.cli.main:cli"
+
+[build-system]
+requires = ["uv_build>=0.8.13,<0.9.0"]
+build-backend = "uv_build"
