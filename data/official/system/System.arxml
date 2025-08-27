@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>Systems</SHORT-NAME>
+      <ELEMENTS>
+        <SYSTEM>
+          <SHORT-NAME>VehicleSystem</SHORT-NAME>
+          <FIBEX-ELEMENTS>
+            <!-- ECU Instances -->
+            <ECU-INSTANCES>
+              <ECU-INSTANCE>
+                <SHORT-NAME>ECU_Engine</SHORT-NAME>
+                <ECU-REFERENCE-IREF>
+                  <VALUE-REF DEST="ECU">/ECUs/EngineECU</VALUE-REF>
+                </ECU-REFERENCE-IREF>
+                <COM-CONFIGURATION-GW-TIME-BASE>0.005</COM-CONFIGURATION-GW-TIME-BASE>
+                <COM-CONFIGURATION-RX-TIME-BASE>0.005</COM-CONFIGURATION-RX-TIME-BASE>
+                <COM-CONFIGURATION-TX-TIME-BASE>0.005</COM-CONFIGURATION-TX-TIME-BASE>
+                <COM-ENABLE-MDT-FOR-CYCLIC-TRANSMISSION>false</COM-ENABLE-MDT-FOR-CYCLIC-TRANSMISSION>
+                <SLEEP-MODE-SUPPORTED>true</SLEEP-MODE-SUPPORTED>
+                <WAKE-UP-OVER-BUS-SUPPORTED>true</WAKE-UP-OVER-BUS-SUPPORTED>
+              </ECU-INSTANCE>
+              <ECU-INSTANCE>
+                <SHORT-NAME>ECU_Transmission</SHORT-NAME>
+                <ECU-REFERENCE-IREF>
+                  <VALUE-REF DEST="ECU">/ECUs/TransmissionECU</VALUE-REF>
+                </ECU-REFERENCE-IREF>
+              </ECU-INSTANCE>
+              <ECU-INSTANCE>
+                <SHORT-NAME>ECU_Body</SHORT-NAME>
+                <ECU-REFERENCE-IREF>
+                  <VALUE-REF DEST="ECU">/ECUs/BodyECU</VALUE-REF>
+                </ECU-REFERENCE-IREF>
+              </ECU-INSTANCE>
+              <ECU-INSTANCE>
+                <SHORT-NAME>ECU_Gateway</SHORT-NAME>
+                <ECU-REFERENCE-IREF>
+                  <VALUE-REF DEST="ECU">/ECUs/GatewayECU</VALUE-REF>
+                </ECU-REFERENCE-IREF>
+              </ECU-INSTANCE>
+            </ECU-INSTANCES>
+          </FIBEX-ELEMENTS>
+          <!-- Root Software Composition -->
+          <ROOT-SOFTWARE-COMPOSITIONS>
+            <ROOT-SW-COMPOSITION-PROTOTYPE>
+              <SHORT-NAME>VehicleSoftwareComposition</SHORT-NAME>
+              <SOFTWARE-COMPOSITION-TREF DEST="COMPOSITION-SW-COMPONENT-TYPE">/Compositions/VehicleTopLevel</SOFTWARE-COMPOSITION-TREF>
+            </ROOT-SW-COMPOSITION-PROTOTYPE>
+          </ROOT-SOFTWARE-COMPOSITIONS>
+          <!-- System Mapping -->
+          <MAPPINGS>
+            <SYSTEM-MAPPING>
+              <SHORT-NAME>VehicleSystemMapping</SHORT-NAME>
+              <!-- SW Mappings -->
+              <SW-IMPL-MAPPINGS>
+                <SWC-TO-IMPL-MAPPING>
+                  <SHORT-NAME>EngineController_Mapping</SHORT-NAME>
+                  <COMPONENT-IREF>
+                    <CONTEXT-COMPOSITION-REF DEST="ROOT-SW-COMPOSITION-PROTOTYPE">/Systems/VehicleSystem/VehicleSoftwareComposition</CONTEXT-COMPOSITION-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/EngineController</CONTEXT-COMPONENT-REF>
+                  </COMPONENT-IREF>
+                  <COMPONENT-IMPLEMENTATION>
+                    <SW-IMPL-REF DEST="SWC-IMPLEMENTATION">/ComponentImplementations/EngineController_Implementation</SW-IMPL-REF>
+                  </COMPONENT-IMPLEMENTATION>
+                </SWC-TO-IMPL-MAPPING>
+              </SW-IMPL-MAPPINGS>
+              <!-- SW to ECU Mappings -->
+              <SW-MAPPINGS>
+                <SWC-TO-ECU-MAPPING>
+                  <SHORT-NAME>EngineController_To_EngineECU</SHORT-NAME>
+                  <COMPONENT-IREF>
+                    <CONTEXT-COMPOSITION-REF DEST="ROOT-SW-COMPOSITION-PROTOTYPE">/Systems/VehicleSystem/VehicleSoftwareComposition</CONTEXT-COMPOSITION-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/EngineController</CONTEXT-COMPONENT-REF>
+                  </COMPONENT-IREF>
+                  <ECU-INSTANCE-REF DEST="ECU-INSTANCE">/Systems/VehicleSystem/ECU_Engine</ECU-INSTANCE-REF>
+                </SWC-TO-ECU-MAPPING>
+                <SWC-TO-ECU-MAPPING>
+                  <SHORT-NAME>TransmissionController_To_TransmissionECU</SHORT-NAME>
+                  <COMPONENT-IREF>
+                    <CONTEXT-COMPOSITION-REF DEST="ROOT-SW-COMPOSITION-PROTOTYPE">/Systems/VehicleSystem/VehicleSoftwareComposition</CONTEXT-COMPOSITION-REF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/TransmissionController</CONTEXT-COMPONENT-REF>
+                  </COMPONENT-IREF>
+                  <ECU-INSTANCE-REF DEST="ECU-INSTANCE">/Systems/VehicleSystem/ECU_Transmission</ECU-INSTANCE-REF>
+                </SWC-TO-ECU-MAPPING>
+              </SW-MAPPINGS>
+              <!-- Data Mappings -->
+              <DATA-MAPPINGS>
+                <SENDER-RECEIVER-TO-SIGNAL-MAPPING>
+                  <DATA-ELEMENT-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/EngineController</CONTEXT-COMPONENT-REF>
+                    <CONTEXT-PORT-REF DEST="P-PORT-PROTOTYPE">/ComponentTypes/ApplicationComponents/EngineController/PP_EngineSpeed</CONTEXT-PORT-REF>
+                    <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/PortInterfaces/SenderReceiverInterfaces/SR_EngineSpeed/SpeedValue</TARGET-DATA-ELEMENT-REF>
+                  </DATA-ELEMENT-IREF>
+                  <SYSTEM-SIGNAL-REF DEST="SYSTEM-SIGNAL">/SystemSignals/SIG_EngineSpeed</SYSTEM-SIGNAL-REF>
+                </SENDER-RECEIVER-TO-SIGNAL-MAPPING>
+                <SENDER-RECEIVER-TO-SIGNAL-MAPPING>
+                  <DATA-ELEMENT-IREF>
+                    <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/ThrottleSensor</CONTEXT-COMPONENT-REF>
+                    <CONTEXT-PORT-REF DEST="P-PORT-PROTOTYPE">/ComponentTypes/ApplicationComponents/ThrottleSensor/PP_ThrottlePosition</CONTEXT-PORT-REF>
+                    <TARGET-DATA-ELEMENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/PortInterfaces/SenderReceiverInterfaces/SR_ThrottlePosition/ThrottleValue</TARGET-DATA-ELEMENT-REF>
+                  </DATA-ELEMENT-IREF>
+                  <SYSTEM-SIGNAL-REF DEST="SYSTEM-SIGNAL">/SystemSignals/SIG_ThrottlePosition</SYSTEM-SIGNAL-REF>
+                </SENDER-RECEIVER-TO-SIGNAL-MAPPING>
+              </DATA-MAPPINGS>
+            </SYSTEM-MAPPING>
+          </MAPPINGS>
+        </SYSTEM>
+      </ELEMENTS>
+    </AR-PACKAGE>
+    <!-- System Signals -->
+    <AR-PACKAGE>
+      <SHORT-NAME>SystemSignals</SHORT-NAME>
+      <ELEMENTS>
+        <SYSTEM-SIGNAL>
+          <SHORT-NAME>SIG_EngineSpeed</SHORT-NAME>
+          <DYNAMIC-LENGTH>false</DYNAMIC-LENGTH>
+          <INIT-VALUE>
+            <NUMERICAL-VALUE-SPECIFICATION>
+              <VALUE>0</VALUE>
+            </NUMERICAL-VALUE-SPECIFICATION>
+          </INIT-VALUE>
+          <LENGTH>2</LENGTH>
+          <NETWORK-REPRESENTATION-PROPS>
+            <SW-DATA-DEF-PROPS-VARIANTS>
+              <SW-DATA-DEF-PROPS-CONDITIONAL>
+                <BASE-TYPE-REF DEST="SW-BASE-TYPE">/DataTypes/BaseTypes/uint16</BASE-TYPE-REF>
+              </SW-DATA-DEF-PROPS-CONDITIONAL>
+            </SW-DATA-DEF-PROPS-VARIANTS>
+          </NETWORK-REPRESENTATION-PROPS>
+        </SYSTEM-SIGNAL>
+        <SYSTEM-SIGNAL>
+          <SHORT-NAME>SIG_ThrottlePosition</SHORT-NAME>
+          <DYNAMIC-LENGTH>false</DYNAMIC-LENGTH>
+          <LENGTH>1</LENGTH>
+        </SYSTEM-SIGNAL>
+        <SYSTEM-SIGNAL>
+          <SHORT-NAME>SIG_EngineTemperature</SHORT-NAME>
+          <DYNAMIC-LENGTH>false</DYNAMIC-LENGTH>
+          <LENGTH>2</LENGTH>
+        </SYSTEM-SIGNAL>
+      </ELEMENTS>
+    </AR-PACKAGE>
+    <!-- Compositions -->
+    <AR-PACKAGE>
+      <SHORT-NAME>Compositions</SHORT-NAME>
+      <ELEMENTS>
+        <COMPOSITION-SW-COMPONENT-TYPE>
+          <SHORT-NAME>VehicleTopLevel</SHORT-NAME>
+          <COMPONENTS>
+            <SW-COMPONENT-PROTOTYPE>
+              <SHORT-NAME>EngineController</SHORT-NAME>
+              <TYPE-TREF DEST="APPLICATION-SW-COMPONENT-TYPE">/ComponentTypes/ApplicationComponents/EngineController</TYPE-TREF>
+            </SW-COMPONENT-PROTOTYPE>
+            <SW-COMPONENT-PROTOTYPE>
+              <SHORT-NAME>TransmissionController</SHORT-NAME>
+              <TYPE-TREF DEST="APPLICATION-SW-COMPONENT-TYPE">/ComponentTypes/ApplicationComponents/TransmissionController</TYPE-TREF>
+            </SW-COMPONENT-PROTOTYPE>
+            <SW-COMPONENT-PROTOTYPE>
+              <SHORT-NAME>ThrottleSensor</SHORT-NAME>
+              <TYPE-TREF DEST="SENSOR-ACTUATOR-SW-COMPONENT-TYPE">/ComponentTypes/ApplicationComponents/ThrottleSensor</TYPE-TREF>
+            </SW-COMPONENT-PROTOTYPE>
+            <SW-COMPONENT-PROTOTYPE>
+              <SHORT-NAME>BodyController</SHORT-NAME>
+              <TYPE-TREF DEST="APPLICATION-SW-COMPONENT-TYPE">/ComponentTypes/ApplicationComponents/BodyController</TYPE-TREF>
+            </SW-COMPONENT-PROTOTYPE>
+          </COMPONENTS>
+          <CONNECTORS>
+            <!-- Assembly Connectors -->
+            <ASSEMBLY-SW-CONNECTOR>
+              <SHORT-NAME>ThrottleToEngine</SHORT-NAME>
+              <PROVIDER-IREF>
+                <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/ThrottleSensor</CONTEXT-COMPONENT-REF>
+                <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/ComponentTypes/ApplicationComponents/ThrottleSensor/PP_ThrottlePosition</TARGET-P-PORT-REF>
+              </PROVIDER-IREF>
+              <REQUESTER-IREF>
+                <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/EngineController</CONTEXT-COMPONENT-REF>
+                <TARGET-R-PORT-REF DEST="R-PORT-PROTOTYPE">/ComponentTypes/ApplicationComponents/EngineController/RP_ThrottlePosition</TARGET-R-PORT-REF>
+              </REQUESTER-IREF>
+            </ASSEMBLY-SW-CONNECTOR>
+            <!-- Delegation Connectors -->
+            <DELEGATION-SW-CONNECTOR>
+              <SHORT-NAME>EngineSpeed_Delegation</SHORT-NAME>
+              <INNER-PORT-IREF>
+                <P-PORT-IN-COMPOSITION-INSTANCE-REF>
+                  <CONTEXT-COMPONENT-REF DEST="SW-COMPONENT-PROTOTYPE">/Compositions/VehicleTopLevel/EngineController</CONTEXT-COMPONENT-REF>
+                  <TARGET-P-PORT-REF DEST="P-PORT-PROTOTYPE">/ComponentTypes/ApplicationComponents/EngineController/PP_EngineSpeed</TARGET-P-PORT-REF>
+                </P-PORT-IN-COMPOSITION-INSTANCE-REF>
+              </INNER-PORT-IREF>
+              <OUTER-PORT-REF DEST="P-PORT-PROTOTYPE">/Compositions/VehicleTopLevel/PP_EngineSpeed_Out</OUTER-PORT-REF>
+            </DELEGATION-SW-CONNECTOR>
+          </CONNECTORS>
+          <PORTS>
+            <P-PORT-PROTOTYPE>
+              <SHORT-NAME>PP_EngineSpeed_Out</SHORT-NAME>
+              <PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/PortInterfaces/SenderReceiverInterfaces/SR_EngineSpeed</PROVIDED-INTERFACE-TREF>
+            </P-PORT-PROTOTYPE>
+            <R-PORT-PROTOTYPE>
+              <SHORT-NAME>RP_VehicleSpeed_In</SHORT-NAME>
+              <REQUIRED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE">/PortInterfaces/SenderReceiverInterfaces/SR_VehicleSpeed</REQUIRED-INTERFACE-TREF>
+            </R-PORT-PROTOTYPE>
+          </PORTS>
+        </COMPOSITION-SW-COMPONENT-TYPE>
+      </ELEMENTS>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

@@ -216,13 +216,15 @@ class TestECUCAnalyzer:
         """Test pattern detection in ECUC configuration."""
         result = analyzer.analyze(ecuc_document)
         
-        # Check for patterns
-        assert 'patterns' in result.patterns or len(result.patterns) == 0
+        # Check for patterns - patterns is a dict of lists
+        assert isinstance(result.patterns, dict)
         
         # If patterns found, verify structure
         if result.patterns:
+            assert len(result.patterns) > 0  # Should have at least one pattern type
             for pattern_type, patterns in result.patterns.items():
                 assert isinstance(patterns, list)
+                assert len(patterns) > 0  # Should have at least one pattern of this type
                 for pattern in patterns:
                     assert isinstance(pattern, dict)
     

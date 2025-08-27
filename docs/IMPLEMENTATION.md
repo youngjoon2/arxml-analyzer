@@ -6,21 +6,34 @@
 arxml-analyzer/
 ├── src/arxml_analyzer/
 │   ├── __init__.py
-│   ├── cli/              # CLI 인터페이스 (미구현)
+│   ├── cli/              # CLI 인터페이스 ✅
+│   │   └── main.py       # CLI 메인 엔트리포인트
 │   ├── core/             # 핵심 컴포넌트
 │   │   ├── parser/       # 파싱 엔진 ✅
 │   │   ├── analyzer/     # 분석 엔진 ✅ 
-│   │   ├── validator/    # 검증 엔진 (미구현)
-│   │   └── reporter/     # 출력 포맷터 (미구현)
+│   │   ├── validator/    # 검증 엔진 ✅
+│   │   ├── comparator.py # 비교 엔진 ✅
+│   │   └── reporter/     # 출력 포맷터 ✅
+│   │       └── formatters/
+│   │           ├── base_formatter.py
+│   │           ├── json_formatter.py
+│   │           └── tree_formatter.py
 │   ├── engine/           # 메인 엔진 (미구현)
-│   ├── analyzers/        # 타입별 분석기 (미구현)
+│   ├── analyzers/        # 타입별 분석기
+│   │   ├── ecuc_analyzer.py ✅
+│   │   ├── swc_analyzer.py ✅
+│   │   ├── interface_analyzer.py ✅
+│   │   └── gateway_analyzer.py ✅
 │   ├── plugins/          # 플러그인 시스템 (미구현)
 │   ├── models/           # 데이터 모델 ✅
 │   ├── utils/            # 유틸리티 ✅
 │   └── config/           # 설정 관리 (미구현)
 ├── tests/
 │   ├── unit/             # 단위 테스트 ✅
-│   ├── integration/      # 통합 테스트 (미구현)
+│   │   ├── test_base_analyzer.py
+│   │   └── test_ecuc_analyzer.py
+│   ├── integration/      # 통합 테스트 ✅
+│   │   └── test_cli.py
 │   └── fixtures/         # 테스트 데이터
 ├── plugins/              # 사용자 정의 플러그인
 │   └── custom/
@@ -28,7 +41,7 @@ arxml-analyzer/
 └── scripts/              # 유틸리티 스크립트
 ```
 
-## 2. 구현 완료 컴포넌트
+## 2. 구현 완료 컴포넌트 (2025-08-27 업데이트)
 
 ### 2.1 Parser 컴포넌트 (`core/parser/`)
 
@@ -135,7 +148,50 @@ class PatternFinder:
 - REFERENCE: 참조 무결성, 미사용 ID
 - STATISTICAL: 빈도 분석, 이상치 감지
 
-### 2.5 데이터 모델 (`models/`)
+### 2.5 Output Formatters (`core/reporter/formatters/`)
+
+#### YAMLFormatter (`yaml_formatter.py`)
+```python
+class YAMLFormatter(BaseFormatter):
+    - format(result) -> str
+    - format_to_file(result, file_path)
+    - _serialize_for_yaml(obj) -> Any
+```
+- YAML 형식으로 분석 결과 출력
+- 유니코드 지원
+- 계층적 데이터 표현
+
+#### TableFormatter (`table_formatter.py`)
+```python
+class TableFormatter(BaseFormatter):
+    - format(result) -> str
+    - format_to_file(result, file_path)
+    - _create_metadata_table(result) -> Table
+    - _create_summary_table(result) -> Table
+    - _create_statistics_table(result) -> Table
+    - _create_pattern_table(pattern_type, patterns) -> Table
+    - _create_recommendations_table(result) -> Table
+```
+- Rich 라이브러리 사용
+- 컨솔 출력용 테이블 형식
+- 색상 및 스타일 지원
+
+#### CSVFormatter (`csv_formatter.py`)
+```python
+class CSVFormatter(BaseFormatter):
+    - format(result) -> str
+    - format_to_file(result, file_path)
+    - _write_metadata_csv(output, result)
+    - _write_summary_csv(output, result)
+    - _write_statistics_csv(output, result)
+    - _write_patterns_csv(output, pattern_type, patterns)
+    - _write_recommendations_csv(output, result)
+```
+- CSV 형식으로 데이터 내보내기
+- 섹션별 CSV 작성
+- 스프레드시트 호환
+
+### 2.6 데이터 모델 (`models/`)
 
 #### ARXMLDocument (`arxml_document.py`)
 ```python
@@ -153,7 +209,160 @@ class ARXMLDocument:
     - clear_cache()
 ```
 
-### 2.6 유틸리티 (`utils/`)
+### 2.7 타입별 분석기 (`analyzers/`)
+
+#### ECUCAnalyzer (`ecuc_analyzer.py`)
+```python
+class ECUCAnalyzer(BaseAnalyzer):
+    - analyze_ecuc_modules()
+    - extract_parameters()
+    - analyze_containers()
+    - check_reference_integrity()
+    - analyze_dependencies()
+```
+
+**기능:**
+- ECUC 모듈 구성 분석
+- 파라미터 추출 및 검증
+- 컨테이너 계층 구조 분석
+- 참조 무결성 검사
+- 의존성 분석
+
+#### SWCAnalyzer (`swc_analyzer.py`)
+```python
+class SWCAnalyzer(BaseAnalyzer):
+    - extract_swc_components()
+    - extract_ports()
+    - extract_runnables()
+    - calculate_port_statistics()
+    - calculate_runnable_statistics()
+    - analyze_interface_usage()
+    - calculate_complexity_metrics()
+```
+
+**기능:**
+- Software Component 추출 및 분석
+- 포트 (P-PORT, R-PORT, PR-PORT) 분석
+- Runnable 엔티티 분석
+- 인터페이스 사용 패턴 분석
+- 복잡도 메트릭 계산
+
+#### InterfaceAnalyzer (`interface_analyzer.py`)
+```python
+class InterfaceAnalyzer(BaseAnalyzer):
+    - extract_sr_interfaces()      # Sender-Receiver
+    - extract_cs_interfaces()      # Client-Server
+    - extract_ms_interfaces()      # Mode-Switch
+    - extract_param_interfaces()   # Parameter
+    - extract_nv_interfaces()      # NV-Data
+    - extract_trigger_interfaces() # Trigger
+    - analyze_data_type_usage()
+    - analyze_operation_complexity()
+    - analyze_interface_relationships()
+    - validate_interfaces()
+```
+
+**기능:**
+- 6가지 인터페이스 타입 분석
+- 데이터 타입 사용 분석
+- 오퍼레이션 복잡도 분석
+- 인터페이스 간 관계 분석
+- 인터페이스 유효성 검증
+
+#### GatewayAnalyzer (`gateway_analyzer.py`)
+```python
+class GatewayAnalyzer(BaseAnalyzer):
+    - extract_routing_paths()         # PDU 라우팅 경로
+    - extract_signal_gateways()       # 시그널 게이트웨이
+    - extract_network_interfaces()    # 네트워크 인터페이스
+    - extract_protocol_conversions()  # 프로토콜 변환
+    - extract_multicast_groups()      # 멀티캐스트 그룹
+    - analyze_gateway_metrics()       # 게이트웨이 메트릭
+    - analyze_routing_complexity()    # 라우팅 복잡도
+    - validate_gateway_configuration() # 설정 검증
+```
+
+**기능:**
+- PDU 라우팅 경로 분석
+- 시그널 게이트웨이 매핑
+- 네트워크 인터페이스 및 클러스터 분석
+- 프로토콜 변환 설정
+- 멀티캐스트 그룹 구성
+- 게이트웨이 성능 메트릭 계산
+
+#### DiagnosticAnalyzer (`diagnostic_analyzer.py`)
+```python
+class DiagnosticAnalyzer(BaseAnalyzer):
+    - extract_dcm_configuration()      # DCM 구성 추출
+    - extract_dem_configuration()      # DEM 구성 추출
+    - extract_diagnostic_services()    # 진단 서비스
+    - extract_dtc_configuration()      # DTC 설정
+    - extract_diagnostic_protocols()   # 진단 프로토콜
+    - extract_diagnostic_sessions()    # 진단 세션
+    - extract_security_access_levels() # 보안 접근 레벨
+    - analyze_service_metrics()        # 서비스 메트릭
+    - analyze_dtc_metrics()           # DTC 메트릭
+    - validate_diagnostic_configuration() # 구성 검증
+```
+
+**기능:**
+- DCM (Diagnostic Communication Manager) 구성 분석
+- DEM (Diagnostic Event Manager) 구성 분석
+- UDS 서비스 및 서브함수 분석
+- DTC (Diagnostic Trouble Code) 관리
+- 진단 프로토콜 (UDS, KWP2000, OBD) 지원
+- 세션 및 보안 레벨 관리
+- 진단 설정 유효성 검증
+
+### 2.8 Validator 컴포넌트 (`core/validator/`)
+
+#### BaseValidator (`base_validator.py`)
+```python
+class BaseValidator(ABC):
+    - validate(document) -> ValidationResult
+    - validate_safe(document) -> ValidationResult
+    - can_validate(document) -> bool
+```
+
+#### SchemaValidator (`schema_validator.py`)
+- XSD 스키마 검증
+- 기본 구조 검증
+- 중복 SHORT-NAME 체크
+- 빈 필수 요소 체크
+
+#### ReferenceValidator (`reference_validator.py`)
+- 참조 무결성 검증
+- 미사용 정의 감지
+- 순환 참조 감지
+- 참조 일관성 체크
+
+#### RuleValidator (`rule_validator.py`)
+- 규칙 기반 검증
+- 네이밍 컨벤션
+- 컨테이너 다중성
+- 파라미터 범위 검증
+
+#### CompositeValidator (`composite_validator.py`)
+- 여러 검증기 통합 실행
+- 결과 집계
+
+### 2.9 Comparator (`core/comparator.py`)
+
+```python
+class ARXMLComparator:
+    - compare(doc1, doc2) -> ComparisonResult
+    - _build_element_map(document) -> Dict
+    - _compare_elements(elem1, elem2) -> Dict
+    - _detect_moved_elements() -> List
+```
+
+**기능:**
+- 두 ARXML 파일 비교
+- 추가/삭제/수정/이동 요소 감지
+- 구조적 차이 분석
+- 상세 비교 결과 제공
+
+### 2.10 유틸리티 (`utils/`)
 
 #### Exceptions (`exceptions.py`)
 ```python
@@ -170,6 +379,16 @@ class ValidationError(ARXMLAnalyzerError)
   - AnalysisModels 테스트
   - BaseAnalyzer 테스트
   - PatternFinder 테스트
+- `test_ecuc_analyzer.py`: 15개 테스트 ✅
+  - ECUCAnalyzer 테스트
+- `test_swc_analyzer.py`: 구현 완료 ✅
+  - SWCAnalyzer 테스트
+- `test_interface_analyzer.py`: 구현 완료 ✅
+  - InterfaceAnalyzer 테스트
+- `test_gateway_analyzer.py`: 18개 테스트 ✅
+  - GatewayAnalyzer 테스트
+- `test_diagnostic_analyzer.py`: 17개 테스트 ✅
+  - DiagnosticAnalyzer 테스트
 
 ### 3.2 테스트 커버리지
 - Parser: 테스트 필요
@@ -237,19 +456,25 @@ class ValidationError(ARXMLAnalyzerError)
 
 ### 7.1 우선순위 높음
 1. **타입별 특화 분석기**
-   - ECUCAnalyzer
-   - SWCAnalyzer
-   - GatewayAnalyzer
+   - ECUCAnalyzer ✅
+   - SWCAnalyzer ✅
+   - InterfaceAnalyzer ✅
+   - GatewayAnalyzer ✅
+   - DiagnosticAnalyzer ✅
    
 2. **CLI 인터페이스**
-   - Main entry point
-   - Command handlers
-   - Option parsing
+   - Main entry point ✅
+   - analyze command ✅
+   - validate command ✅
+   - compare command ✅
+   - stats command ✅
 
 3. **Output Formatters**
-   - JSONFormatter
-   - YAMLFormatter
-   - TableFormatter
+   - JSONFormatter ✅
+   - TreeFormatter ✅
+   - YAMLFormatter ✅
+   - TableFormatter ✅
+   - CSVFormatter ✅
 
 ### 7.2 우선순위 중간
 1. **Analysis Engine**
