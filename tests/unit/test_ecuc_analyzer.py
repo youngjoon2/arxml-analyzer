@@ -125,9 +125,8 @@ class TestECUCAnalyzer:
     def test_analyzer_initialization(self, analyzer):
         """Test ECUCAnalyzer initialization."""
         assert analyzer.name == "ECUCAnalyzer"
-        assert analyzer.version == "1.0.0"
-        assert "ECUC" in analyzer.supported_types
-        assert "ECU_CONFIGURATION" in analyzer.supported_types
+        assert analyzer.version == "2.0.0"
+        # Note: V2 uses adaptive type detection instead of hardcoded supported_types
     
     def test_can_analyze_ecuc_document(self, analyzer, ecuc_document):
         """Test if analyzer can handle ECUC documents."""
