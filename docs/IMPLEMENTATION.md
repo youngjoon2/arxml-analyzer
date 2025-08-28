@@ -18,7 +18,7 @@ arxml-analyzer/
 │   │           ├── base_formatter.py
 │   │           ├── json_formatter.py
 │   │           └── tree_formatter.py
-│   ├── engine/           # 메인 엔진 (미구현)
+│   ├── engine/           # 메인 엔진 ✅
 │   ├── analyzers/        # 타입별 분석기
 │   │   ├── ecuc_analyzer.py ✅
 │   │   ├── swc_analyzer.py ✅
@@ -41,7 +41,150 @@ arxml-analyzer/
 └── scripts/              # 유틸리티 스크립트
 ```
 
-## 2. 구현 완료 컴포넌트 (2025-08-27 업데이트)
+## 2. 구현 완료 컴포넌트 (2025-08-28 업데이트)
+
+### 2.12 CommunicationAnalyzer (`analyzers/communication_analyzer.py`)
+```python
+class CommunicationAnalyzer(BaseAnalyzer):
+    - analyze_com_module()         # COM 모듈 분석
+    - analyze_pdur_module()        # PduR 모듈 분석
+    - analyze_cantp_module()       # CanTp 모듈 분석
+    - extract_ipdu_info()          # I-PDU 정보 추출
+    - extract_signal_info()        # Signal 정보 추출
+    - extract_signal_group_info()  # Signal Group 정보 추출
+    - extract_gateway_mapping()    # 게이트웨이 매핑 추출
+    - extract_routing_path_info()  # PDU 라우팅 경로 추출
+    - calculate_communication_metrics() # 통신 메트릭 계산
+    - validate_communication_config()   # 통신 설정 검증
+```
+
+**기능:**
+- AUTOSAR Communication Stack 분석 (COM, PduR, CanTp)
+- I-PDU 및 Signal 분석
+- Signal Group 처리
+- Gateway 매핑 분석
+- PDU 라우팅 경로 추출
+- Transport Protocol 설정 분석
+- 통신 복잡도 메트릭 계산
+- 통신 구성 유효성 검증
+
+### 2.13 BSWAnalyzer (`analyzers/bsw_analyzer.py`)
+```python
+class BSWAnalyzer(BaseAnalyzer):
+    - analyze_bsw_modules()        # BSW 모듈 분석
+    - analyze_bsw_interfaces()     # BSW 인터페이스 분석
+    - analyze_bsw_services()       # BSW 서비스 분석
+    - analyze_bsw_configurations() # BSW 구성 분석
+    - analyze_bsw_dependencies()   # BSW 의존성 분석
+    - extract_ecuc_module_info()   # ECUC 모듈 정보 추출
+    - extract_bsw_module_info()    # BSW 모듈 정보 추출
+    - calculate_bsw_metrics()      # BSW 메트릭 계산
+    - detect_dependency_cycles()   # 순환 의존성 감지
+```
+
+**기능:**
+- AUTOSAR Basic Software 모듈 분석
+- BSW 카테고리별 분류 (System, Memory, Communication, Diagnostic, Crypto, IO, Network, Security, Watchdog, Runtime)
+- BSW 인터페이스 및 서비스 분석
+- BSW 구성 파라미터 추출
+- 모듈 간 의존성 분석
+- 순환 의존성 감지
+- BSW 구성 복잡도 측정
+
+### 2.14 Document Profiler (`core/profiler/document_profiler.py`)
+```python
+class DocumentProfiler:
+    - profile_document(root)           # 문서 프로파일링
+    - extract_namespaces()             # 네임스페이스 추출
+    - analyze_structure()              # 문서 구조 분석
+    - detect_document_type()           # 문서 타입 자동 감지
+    - analyze_naming_conventions()     # 명명 규칙 분석
+    - identify_element_types()         # 요소 타입 식별
+    - get_container_elements()         # 컨테이너 요소 찾기
+    - get_parameter_elements()         # 파라미터 요소 찾기
+    - get_reference_elements()         # 참조 요소 찾기
+    - suggest_patterns_for_type()      # 타입별 패턴 제안
+```
+
+**기능 (범용성 개선):**
+- ARXML 문서 구조 자동 프로파일링
+- 하드코딩 없이 문서 타입 자동 감지
+- 명명 규칙 자동 식별 (UPPER_CASE, PascalCase, camelCase, kebab-case 등)
+- 요소 패턴 자동 분류 (Container, Parameter, Reference)
+- 동적 XPath 생성
+- 툴별 특성 자동 감지
+- 프로파일 내보내기/재사용
+
+### 2.15 Validation Components (`core/validator/`)
+
+#### SchemaValidator (`schema_validator.py`)
+- XSD 스키마 검증
+- 기본 구조 검증
+- 중복 SHORT-NAME 체크
+- 빈 필수 요소 체크
+
+#### ReferenceValidator (`reference_validator.py`)
+- 참조 무결성 검증
+- 미사용 정의 감지
+- 순환 참조 감지
+- 참조 일관성 체크
+
+#### RuleValidator (`rule_validator.py`)
+- 규칙 기반 검증
+- 네이밍 컨벤션
+- 컨테이너 다중성
+- 파라미터 범위 검증
+
+#### CompositeValidator (`composite_validator.py`)
+- 여러 검증기 통합 실행
+- 결과 집계
+
+### 2.11 Analysis Engine (`engine/`)
+
+#### AnalysisEngine (`analysis_engine.py`)
+```python
+class AnalysisEngine:
+    - analyze_file(file_path) -> EngineResult
+    - analyze_files(file_paths) -> List[EngineResult]
+    - register_analyzer(name, analyzer_class)
+    - get_available_analyzers() -> List[str]
+```
+
+**기능:**
+- ARXML 파일 분석 오케스트레이션
+- 타입 자동 감지 및 분석기 선택
+- 단일/다중 파일 분석
+- 동적 분석기 등록
+
+#### ParallelProcessor (`parallel_processor.py`)
+```python
+class ParallelProcessor:
+    - process_files(engine, file_paths) -> List[Any]
+    - process_with_function(func, items) -> List[ProcessingResult]
+    - map_reduce(map_func, reduce_func, items) -> Any
+    - batch_process(func, items, batch_size) -> List[ProcessingResult]
+```
+
+**기능:**
+- 병렬 파일 처리
+- Thread/Process Pool 관리
+- Map-Reduce 패턴 지원
+- 배치 처리
+
+#### AnalysisOrchestrator (`orchestrator.py`)
+```python
+class AnalysisOrchestrator:
+    - analyze_directory(directory, pattern, recursive) -> OrchestratorResult
+    - execute_workflow(workflow_name, inputs) -> OrchestratorResult
+    - register_workflow(workflow) -> None
+    - generate_report(result, format, output_file) -> str
+```
+
+**기능:**
+- 디렉토리 전체 분석
+- 워크플로우 정의 및 실행
+- 결과 집계 및 보고서 생성
+- 사용자 정의 워크플로우 등록
 
 ### 2.1 Parser 컴포넌트 (`core/parser/`)
 
@@ -314,6 +457,28 @@ class DiagnosticAnalyzer(BaseAnalyzer):
 - 세션 및 보안 레벨 관리
 - 진단 설정 유효성 검증
 
+#### MCALAnalyzer (`mcal_analyzer.py`)
+```python
+class MCALAnalyzer(BaseAnalyzer):
+    - extract_mcal_modules()           # MCAL 모듈 추출
+    - extract_hardware_configurations() # 하드웨어 구성
+    - extract_pin_mappings()           # 핀 매핑
+    - extract_clock_configurations()    # 클럭 설정
+    - extract_interrupt_configurations() # 인터럽트 설정
+    - analyze_peripheral_usage()       # 주변장치 사용률
+    - analyze_resource_allocation()    # 리소스 할당
+    - validate_mcal_configuration()    # MCAL 검증
+```
+
+**기능:**
+- MCAL 모듈 분석 (PORT, DIO, ADC, PWM, ICU, GPT, MCU, WDG, SPI, CAN, LIN, FlexRay, ETH, FLS, EEP, RAM)
+- 하드웨어 구성 및 속성 추출
+- 핀 매핑 및 기능 할당
+- 클럭 도메인 및 PLL 설정
+- 인터럽트 벡터 및 우선순위 관리
+- 주변장치 활용률 분석
+- 리소스 충돌 검사
+
 ### 2.8 Validator 컴포넌트 (`core/validator/`)
 
 #### BaseValidator (`base_validator.py`)
@@ -389,12 +554,20 @@ class ValidationError(ARXMLAnalyzerError)
   - GatewayAnalyzer 테스트
 - `test_diagnostic_analyzer.py`: 17개 테스트 ✅
   - DiagnosticAnalyzer 테스트
+- `test_analysis_engine.py`: Analysis Engine 테스트 ✅
+  - AnalysisEngine 테스트
+  - ParallelProcessor 테스트  
+  - AnalysisOrchestrator 테스트
+- `test_mcal_analyzer.py`: MCALAnalyzer 테스트 ✅
 
 ### 3.2 테스트 커버리지
 - Parser: 테스트 필요
 - Type Detector: 테스트 필요
 - Base Analyzer: 100% ✅
 - Pattern Finder: 100% ✅
+- CommunicationAnalyzer: 15개 테스트 ✅
+- BSWAnalyzer: 13개 테스트 ✅
+- Document Profiler: 11개 테스트 ✅
 
 ## 4. 기술 스택
 
@@ -454,13 +627,16 @@ class ValidationError(ARXMLAnalyzerError)
 
 ## 7. 미구현 컴포넌트
 
-### 7.1 우선순위 높음
+### 7.1 우선순위 높음 (모두 완료)
 1. **타입별 특화 분석기**
    - ECUCAnalyzer ✅
    - SWCAnalyzer ✅
    - InterfaceAnalyzer ✅
    - GatewayAnalyzer ✅
    - DiagnosticAnalyzer ✅
+   - MCALAnalyzer ✅
+   - CommunicationAnalyzer ✅
+   - BSWAnalyzer ✅
    
 2. **CLI 인터페이스**
    - Main entry point ✅
@@ -476,19 +652,31 @@ class ValidationError(ARXMLAnalyzerError)
    - TableFormatter ✅
    - CSVFormatter ✅
 
-### 7.2 우선순위 중간
-1. **Analysis Engine**
+4. **Document Profiler (범용성 개선)** ✅
+   - DocumentProfiler: 문서 구조 특성 자동 분석
+   - NamingConvention: 명명 규칙 자동 감지
+   - ElementPattern: 요소 패턴 학습 및 분류
+   - 하드코딩 없이 문서 타입 및 구조 자동 분석
+
+### 7.2 우선순위 중간 (모두 완료)
+1. **Analysis Engine** ✅
    - 분석 오케스트레이션
    - 병렬 처리
    
-2. **Validation Component**
-   - XSD 검증
-   - 규칙 기반 검증
+2. **Validation Component** ✅
+   - SchemaValidator: XSD 검증
+   - RuleValidator: 규칙 기반 검증
+   - ReferenceValidator: 참조 무결성 검증
+   - CompositeValidator: 통합 검증
 
 ### 7.3 우선순위 낮음
 1. **Plugin System**
 2. **Configuration Management**
 3. **Performance Optimization**
+4. **고급 범용성 기능**
+   - ML 기반 실시간 패턴 학습
+   - 지능형 문서 템플릿 생성
+   - 크로스 플랫폼 호환성 자동 검증
 
 ## 8. 품질 메트릭
 
