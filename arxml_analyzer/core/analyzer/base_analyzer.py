@@ -102,17 +102,17 @@ class AnalysisResult:
 class BaseAnalyzer(ABC):
     """Abstract base class for all ARXML analyzers."""
     
-    def __init__(self, name: str = None, version: str = "1.0.0"):
+    def __init__(self, name: Optional[str] = None, version: str = "1.0.0") -> None:
         """Initialize the analyzer.
         
         Args:
             name: Analyzer name (defaults to class name)
             version: Analyzer version
         """
-        self.name = name or self.__class__.__name__
-        self.version = version
+        self.name: str = name or self.__class__.__name__
+        self.version: str = version
         self._supported_types: Set[str] = set()
-        self._analysis_level = AnalysisLevel.STANDARD
+        self._analysis_level: AnalysisLevel = AnalysisLevel.STANDARD
     
     @property
     def supported_types(self) -> Set[str]:

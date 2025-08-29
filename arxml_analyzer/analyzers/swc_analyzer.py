@@ -12,6 +12,7 @@ from collections import defaultdict
 import logging
 
 from ..core.analyzer.base_analyzer import BaseAnalyzer, AnalysisResult, AnalysisLevel
+from ..core.analyzer.cross_reference_analyzer import CrossReferenceAnalyzer, DependencyGraph
 from ..models.arxml_document import ARXMLDocument
 from ..utils.exceptions import AnalysisError
 
@@ -137,7 +138,12 @@ class SWCAnalyzer(BaseAnalyzer):
             interface_usage = self._analyze_interface_usage(swc_components)
             complexity_metrics = self._calculate_complexity_metrics(swc_components)
             
-            return {
+            # Add cross-reference analysis if detailed level
+            cross_references = None
+            if self.analysis_level == AnalysisLevel.DETAILED:
+                cross_references = self._analyze_cross_references(document)
+            
+            result = {
                 "components": [self._swc_to_dict(swc) for swc in swc_components],
                 "port_statistics": port_statistics,
                 "runnable_statistics": runnable_statistics,
@@ -145,6 +151,11 @@ class SWCAnalyzer(BaseAnalyzer):
                 "complexity_metrics": complexity_metrics,
                 "total_components": len(swc_components)
             }
+            
+            if cross_references:
+                result["cross_references"] = cross_references
+                
+            return result
             
         except Exception as e:
             logger.error(f"Error analyzing SWC document: {e}")
@@ -420,6 +431,43 @@ class SWCAnalyzer(BaseAnalyzer):
             ],
             "internal_behavior": swc.internal_behavior
         }
+    
+    def _analyze_cross_references(self, document: ARXMLDocument) -> Dict[str, Any]:
+        """Analyze cross-references and generate dependency graph.
+        
+        Args:
+            document: ARXML document to analyze
+            
+        Returns:
+            Cross-reference analysis results
+        """
+        try:
+            analyzer = CrossReferenceAnalyzer()
+            graph = analyzer.analyze_document(document)
+            report = analyzer.generate_report()
+            
+            # Add graph visualization data
+            report['graph_data'] = {
+                'node_count': len(graph.nodes),
+                'edge_count': len(graph.edges),
+                'graphviz': graph.to_graphviz() if len(graph.nodes) < 100 else None,  # Limit for large graphs
+                'json': graph.to_json()
+            }
+            
+            return report
+            
+        except Exception as e:
+            logger.warning(f"Cross-reference analysis failed: {e}")
+            return {
+                'error': str(e),
+                'summary': {
+                    'total_elements': 0,
+                    'total_references': 0,
+                    'broken_references': 0,
+                    'unused_elements': 0,
+                    'circular_dependencies': 0
+                }
+            }
         
     def _get_text(self, element, tag: str) -> Optional[str]:
         """Safely get text from an element, namespace-agnostic."""

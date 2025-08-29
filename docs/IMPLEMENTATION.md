@@ -348,6 +348,27 @@ class AnalysisResult:
     recommendations: List[str]
 ```
 
+### 5.7 Cross-Reference Analyzer (`core/analyzer/cross_reference_analyzer.py`) ✅ **NEW**
+
+```python
+class CrossReferenceAnalyzer:
+    - analyze_document(document) -> DependencyGraph
+    - analyze_documents(documents) -> DependencyGraph
+    - find_broken_references() -> List[Reference]
+    - find_unused_elements() -> List[DependencyNode]
+    - find_circular_dependencies() -> List[List[str]]
+    - generate_report() -> Dict[str, Any]
+```
+
+**기능:**
+- ARXML 요소 간 참조 관계 분석
+- 의존성 그래프 생성 및 시각화
+- 순환 의존성 감지
+- 깨진 참조 검출
+- 미사용 요소 식별
+- Graphviz DOT 형식 출력
+- JSON 형식 그래프 데이터 생성
+
 ### 5.7 Pattern Finder (`core/analyzer/pattern_finder.py`) ✅
 
 ```python
