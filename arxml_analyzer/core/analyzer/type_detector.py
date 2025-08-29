@@ -187,7 +187,25 @@ class TypeDetector:
             
             for pattern in patterns:
                 try:
-                    elements = document.xpath(pattern)
+                    # Try pattern without namespace first
+                    elements = document.root.xpath(pattern)
+                    if not elements and document.namespaces:
+                        # If no match and namespaces exist, try with default namespace
+                        # Convert pattern to use namespace prefix
+                        ns_pattern = pattern
+                        if 'ar' in document.namespaces:
+                            # Replace element names with namespace-prefixed versions
+                            import re
+                            # Match element names (sequences of word characters and hyphens)
+                            ns_pattern = re.sub(r'([A-Z][\w-]+)', r'ar:\1', pattern)
+                            # But don't prefix attributes
+                            ns_pattern = re.sub(r'ar:@', '@', ns_pattern)
+                            try:
+                                elements = document.root.xpath(ns_pattern, namespaces=document.namespaces)
+                            except:
+                                # If namespace pattern fails, stick with original
+                                elements = []
+                    
                     if elements:
                         matched_patterns.append(pattern)
                         total_elements += len(elements)

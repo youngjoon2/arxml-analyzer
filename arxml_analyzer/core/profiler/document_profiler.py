@@ -242,9 +242,10 @@ class DocumentProfiler:
             convention = self._detect_naming_convention(tag)
             pattern.naming_convention = convention
             
-            # Count conventions
-            if convention not in self._profile.naming_conventions:
-                self._profile.naming_conventions[convention] = convention
+            # Count conventions - use string value as key
+            convention_str = convention.value if isinstance(convention, NamingConvention) else str(convention)
+            if convention_str not in self._profile.naming_conventions:
+                self._profile.naming_conventions[convention_str] = convention
     
     def _detect_naming_convention(self, name: str) -> NamingConvention:
         """Detect the naming convention of a string.

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from ..core.analyzer.base_analyzer import BaseAnalyzer, AnalysisResult, AnalysisMetadata
 from ..core.analyzer.pattern_finder import PatternType
+from ..models.arxml_document import ARXMLDocument
 
 
 @dataclass
@@ -73,24 +74,24 @@ class BSWAnalyzer(BaseAnalyzer):
             "Runtime": ["Rte", "Os"]
         }
         
-    def can_analyze(self, root) -> bool:
+    def can_analyze(self, document: ARXMLDocument) -> bool:
         """BSW 문서 분석 가능 여부 확인"""
         patterns = [
-            './/ECUC-MODULE-DEF[@UUID]',
-            './/BSW-MODULE-DESCRIPTION',
-            './/BSW-MODULE-ENTRY',
-            './/BSW-IMPLEMENTATION',
-            './/BSW-BEHAVIOR'
+            "//*[local-name()='ECUC-MODULE-DEF'][@UUID]",
+            "//*[local-name()='BSW-MODULE-DESCRIPTION']",
+            "//*[local-name()='BSW-MODULE-ENTRY']",
+            "//*[local-name()='BSW-IMPLEMENTATION']",
+            "//*[local-name()='BSW-BEHAVIOR']"
         ]
         
         # BSW 모듈 이름으로도 확인
         for category_modules in self.module_categories.values():
             for module in category_modules:
-                if root.find(f'.//SHORT-NAME[.="{module}"]') is not None:
+                if document.xpath(f"//*[local-name()='SHORT-NAME' and text()='{module}']"):
                     return True
         
         for pattern in patterns:
-            if root.find(pattern) is not None:
+            if document.xpath(pattern):
                 return True
                 
         return False

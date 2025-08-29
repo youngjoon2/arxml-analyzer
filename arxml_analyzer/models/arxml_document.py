@@ -63,10 +63,15 @@ class ARXMLDocument:
                     if version_match:
                         return version_match.group(1).replace('-', '.')
         
-        # Check for explicit version element
-        version_elements = self.xpath('//AR:AUTOSAR/@xsi:schemaLocation', use_cache=False)
-        if version_elements:
-            return str(version_elements[0])
+        # Try different ways to get version
+        # Check for version in AUTOSAR element attributes
+        if hasattr(self.root, 'attrib'):
+            for attr, value in self.root.attrib.items():
+                if 'schemaLocation' in attr and value:
+                    import re
+                    version_match = re.search(r'AUTOSAR[_\s]+(\d+[-.]?\d+[-.]?\d+)', value)
+                    if version_match:
+                        return version_match.group(1).replace('-', '.')
         
         return None
     

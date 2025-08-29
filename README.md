@@ -51,6 +51,9 @@ python main.py analyze large_file.arxml --stream
 
 ### Other Commands
 ```bash
+# Diagnose file compatibility
+python main.py diagnose example.arxml
+
 # Validate ARXML file
 python main.py validate example.arxml
 

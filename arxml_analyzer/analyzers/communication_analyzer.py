@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from ..core.analyzer.base_analyzer import BaseAnalyzer, AnalysisResult, AnalysisMetadata
 from ..core.analyzer.pattern_finder import PatternType
+from ..models.arxml_document import ARXMLDocument
 
 
 @dataclass
@@ -81,22 +82,22 @@ class CommunicationAnalyzer(BaseAnalyzer):
         super().__init__()
         self.type_identifier = "COMMUNICATION"
         
-    def can_analyze(self, root) -> bool:
+    def can_analyze(self, document: ARXMLDocument) -> bool:
         """통신 스택 문서 분석 가능 여부 확인"""
         patterns = [
-            ".//ECUC-MODULE-DEF[SHORT-NAME='Com']",
-            ".//ECUC-MODULE-DEF[SHORT-NAME='PduR']",
-            ".//ECUC-MODULE-DEF[SHORT-NAME='CanTp']",
-            './/COM-CONFIG',
-            './/PDU-R-CONFIG',
-            './/CAN-TP-CONFIG',
-            './/I-PDU-GROUP',
-            './/I-SIGNAL',
-            './/GATEWAY-MAPPING'
+            "//*[local-name()='ECUC-MODULE-DEF' and *[local-name()='SHORT-NAME' and text()='Com']]",
+            "//*[local-name()='ECUC-MODULE-DEF' and *[local-name()='SHORT-NAME' and text()='PduR']]",
+            "//*[local-name()='ECUC-MODULE-DEF' and *[local-name()='SHORT-NAME' and text()='CanTp']]",
+            "//*[local-name()='COM-CONFIG']",
+            "//*[local-name()='PDU-R-CONFIG']",
+            "//*[local-name()='CAN-TP-CONFIG']",
+            "//*[local-name()='I-PDU-GROUP']",
+            "//*[local-name()='I-SIGNAL']",
+            "//*[local-name()='GATEWAY-MAPPING']"
         ]
         
         for pattern in patterns:
-            if root.find(pattern) is not None:
+            if document.xpath(pattern):
                 return True
                 
         return False

@@ -12,6 +12,12 @@ from arxml_analyzer.core.parser.xml_parser import XMLParser
 from arxml_analyzer.core.parser.stream_parser import StreamParser
 from arxml_analyzer.core.analyzer.type_detector import TypeDetector
 from arxml_analyzer.analyzers.ecuc_analyzer import ECUCAnalyzer
+from arxml_analyzer.analyzers.swc_analyzer import SWCAnalyzer
+from arxml_analyzer.analyzers.interface_analyzer import InterfaceAnalyzer
+from arxml_analyzer.analyzers.diagnostic_analyzer import DiagnosticAnalyzer
+from arxml_analyzer.analyzers.communication_analyzer import CommunicationAnalyzer
+from arxml_analyzer.analyzers.bsw_analyzer import BSWAnalyzer
+from arxml_analyzer.analyzers.gateway_analyzer import GatewayAnalyzer
 from arxml_analyzer.core.reporter.formatters import (
     JSONFormatter, 
     TreeFormatter,
@@ -26,6 +32,8 @@ from arxml_analyzer.core.validator import (
 )
 from arxml_analyzer.core.comparator import ARXMLComparator, DifferenceType
 from arxml_analyzer.utils.exceptions import ARXMLAnalyzerError
+import time
+import platform
 
 console = Console()
 
@@ -152,8 +160,19 @@ def analyze(
         
         # Select appropriate analyzer
         analyzer = None
-        if primary_type == "ECUC":
-            analyzer = ECUCAnalyzer()
+        analyzer_map = {
+            "ECUC": ECUCAnalyzer,
+            "SWC": SWCAnalyzer,
+            "INTERFACE": InterfaceAnalyzer,
+            "DIAGNOSTIC": DiagnosticAnalyzer,
+            "COMMUNICATION": CommunicationAnalyzer,
+            "BSW": BSWAnalyzer,
+            "GATEWAY": GatewayAnalyzer
+        }
+        
+        analyzer_class = analyzer_map.get(primary_type)
+        if analyzer_class:
+            analyzer = analyzer_class()
         else:
             console.print(f"[yellow]Warning:[/yellow] Analyzer for type '{primary_type}' not yet implemented")
             console.print("[yellow]Falling back to ECUC analyzer for demonstration[/yellow]")
@@ -723,6 +742,216 @@ def stats(file_path: Path, format: str, verbose: bool):
         if verbose:
             console.print_exception()
         sys.exit(1)
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True, path_type=Path))
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def diagnose(file_path: Path, verbose: bool):
+    """Run diagnostic checks on ARXML file to determine compatibility.
+    
+    FILE_PATH: Path to the ARXML file to diagnose
+    
+    This command performs comprehensive checks on the file including:
+    - System information and resource availability
+    - File format validation
+    - ARXML type detection
+    - Analyzer compatibility
+    - Performance recommendations
+    """
+    _run_diagnostics(file_path, verbose)
+
+
+def _run_diagnostics(file_path: Path, verbose: bool):
+    """Run diagnostic checks on the ARXML file."""
+    from rich.table import Table
+    from rich.panel import Panel
+    
+    # Try to import psutil, but continue if not available
+    try:
+        import psutil
+        has_psutil = True
+    except ImportError:
+        has_psutil = False
+    
+    console.print("\n[bold cyan]ARXML Analyzer Diagnostic Mode[/bold cyan]\n")
+    console.print(f"Analyzing: {file_path}\n")
+    
+    # System Information
+    sys_table = Table(title="System Information", show_header=True)
+    sys_table.add_column("Property", style="cyan")
+    sys_table.add_column("Value", style="white")
+    
+    sys_table.add_row("Platform", platform.platform())
+    sys_table.add_row("Python Version", platform.python_version())
+    sys_table.add_row("Processor", platform.processor() or "Unknown")
+    
+    # Memory info
+    if has_psutil:
+        try:
+            mem = psutil.virtual_memory()
+            sys_table.add_row("Total Memory", f"{mem.total / (1024**3):.1f} GB")
+            sys_table.add_row("Available Memory", f"{mem.available / (1024**3):.1f} GB")
+            sys_table.add_row("Memory Usage", f"{mem.percent:.1f}%")
+        except:
+            sys_table.add_row("Memory Info", "Not available")
+    else:
+        sys_table.add_row("Memory Info", "psutil not installed")
+    
+    console.print(sys_table)
+    console.print()
+    
+    # File Information
+    file_table = Table(title="File Information", show_header=True)
+    file_table.add_column("Property", style="cyan")
+    file_table.add_column("Value", style="white")
+    file_table.add_column("Status", style="green")
+    
+    file_size = file_path.stat().st_size
+    file_table.add_row("File Name", file_path.name, "✓")
+    file_table.add_row("File Size", f"{file_size:,} bytes ({file_size / (1024**2):.2f} MB)", 
+                      "✓" if file_size < 500_000_000 else "⚠ Large file")
+    file_table.add_row("File Exists", "Yes", "✓")
+    file_table.add_row("Read Permission", "Yes" if file_path.exists() else "No", 
+                      "✓" if file_path.exists() else "✗")
+    
+    console.print(file_table)
+    console.print()
+    
+    # Parse Test
+    parse_table = Table(title="Parsing Diagnostics", show_header=True)
+    parse_table.add_column("Test", style="cyan")
+    parse_table.add_column("Result", style="white")
+    parse_table.add_column("Status", style="green")
+    
+    # Try parsing
+    try:
+        start_time = time.time()
+        parser = XMLParser() if file_size < 100_000_000 else StreamParser()
+        document = parser.parse(str(file_path))
+        parse_time = time.time() - start_time
+        
+        parse_table.add_row("XML Parsing", f"Success ({parse_time:.2f}s)", "✓")
+        parse_table.add_row("Parser Type", parser.__class__.__name__, "✓")
+        
+        # Check for namespaces
+        if document.namespaces:
+            ns_list = ", ".join(document.namespaces.keys())
+            parse_table.add_row("Namespaces", ns_list[:50] + "..." if len(ns_list) > 50 else ns_list, "✓")
+        else:
+            parse_table.add_row("Namespaces", "None", "⚠")
+        
+        # Get AUTOSAR version
+        autosar_version = document.get_autosar_version()
+        parse_table.add_row("AUTOSAR Version", autosar_version or "Unknown", 
+                          "✓" if autosar_version else "⚠")
+        
+        # Element count
+        element_count = len(document.root.xpath(".//*"))
+        parse_table.add_row("Total Elements", f"{element_count:,}", "✓")
+        
+    except Exception as e:
+        parse_table.add_row("XML Parsing", f"Failed: {str(e)[:50]}", "✗")
+        document = None
+    
+    console.print(parse_table)
+    console.print()
+    
+    # Type Detection
+    if document:
+        type_table = Table(title="Document Type Detection", show_header=True)
+        type_table.add_column("Type", style="cyan")
+        type_table.add_column("Confidence", style="yellow")
+        type_table.add_column("Analyzer Available", style="green")
+        
+        try:
+            detector = TypeDetector()
+            detected_types = detector.detect(document)
+            
+            analyzer_map = {
+                "ECUC": ECUCAnalyzer,
+                "SWC": SWCAnalyzer,
+                "INTERFACE": InterfaceAnalyzer,
+                "DIAGNOSTIC": DiagnosticAnalyzer,
+                "COMMUNICATION": CommunicationAnalyzer,
+                "BSW": BSWAnalyzer,
+                "GATEWAY": GatewayAnalyzer
+            }
+            
+            for dt in detected_types[:5]:  # Top 5 types
+                analyzer_available = "✓" if dt.name in analyzer_map else "✗"
+                type_table.add_row(dt.name, f"{dt.confidence:.1%}", analyzer_available)
+            
+            if not detected_types:
+                type_table.add_row("Unknown", "0%", "✗")
+        except Exception as e:
+            type_table.add_row("Detection Failed", str(e)[:50], "✗")
+        
+        console.print(type_table)
+        console.print()
+    
+    # Analyzer Compatibility
+    if document and detected_types:
+        analyzer_table = Table(title="Analyzer Compatibility", show_header=True)
+        analyzer_table.add_column("Analyzer", style="cyan")
+        analyzer_table.add_column("Can Analyze", style="white")
+        analyzer_table.add_column("Status", style="green")
+        
+        analyzers = [
+            ("ECUCAnalyzer", ECUCAnalyzer()),
+            ("SWCAnalyzer", SWCAnalyzer()),
+            ("InterfaceAnalyzer", InterfaceAnalyzer()),
+            ("DiagnosticAnalyzer", DiagnosticAnalyzer()),
+            ("CommunicationAnalyzer", CommunicationAnalyzer()),
+            ("BSWAnalyzer", BSWAnalyzer()),
+            ("GatewayAnalyzer", GatewayAnalyzer())
+        ]
+        
+        compatible_analyzers = []
+        for name, analyzer in analyzers:
+            try:
+                can_analyze = analyzer.can_analyze(document)
+                analyzer_table.add_row(name, "Yes" if can_analyze else "No", 
+                                      "✓" if can_analyze else "✗")
+                if can_analyze:
+                    compatible_analyzers.append(name)
+            except Exception as e:
+                analyzer_table.add_row(name, f"Error: {str(e)[:30]}", "⚠")
+        
+        console.print(analyzer_table)
+        console.print()
+        
+        # Recommendations
+        if compatible_analyzers:
+            console.print(Panel(
+                f"[green]✓ File is compatible with {len(compatible_analyzers)} analyzer(s)[/green]\n\n"
+                f"Recommended analyzer: [bold cyan]{compatible_analyzers[0]}[/bold cyan]\n\n"
+                f"You can analyze this file using:\n"
+                f"[dim]arxml-analyzer analyze {file_path.name}[/dim]",
+                title="[bold]Diagnostic Summary[/bold]",
+                border_style="green"
+            ))
+        else:
+            console.print(Panel(
+                "[red]✗ No compatible analyzer found[/red]\n\n"
+                "This file may not be a valid ARXML file or may use an unsupported format.",
+                title="[bold]Diagnostic Summary[/bold]",
+                border_style="red"
+            ))
+    else:
+        console.print(Panel(
+            "[red]✗ Unable to parse file[/red]\n\n"
+            "The file could not be parsed as valid XML. Please check the file format.",
+            title="[bold]Diagnostic Summary[/bold]",
+            border_style="red"
+        ))
+    
+    # Performance recommendations
+    if document and file_size > 100_000_000:
+        console.print("\n[yellow]Performance Tip:[/yellow] For large files, use --stream option for better memory efficiency.")
+    
+    if verbose and document:
+        console.print("\n[dim]Run with --verbose for more detailed analysis information.[/dim]")
 
 
 def main():

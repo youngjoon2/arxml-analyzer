@@ -61,26 +61,72 @@ class SWCAnalyzer(BaseAnalyzer):
         super().__init__(name="SWCAnalyzer", version="1.0.0")
         self.supported_types = ["SWC", "APPLICATION-SW-COMPONENT-TYPE", "COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE"]
         
-    def can_analyze(self, document: ARXMLDocument) -> bool:
-        """Check if this analyzer can handle the document."""
-        swc_elements = [
-            "APPLICATION-SW-COMPONENT-TYPE",
-            "COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE", 
-            "SERVICE-SW-COMPONENT-TYPE",
-            "SENSOR-ACTUATOR-SW-COMPONENT-TYPE",
-            "CALIBRATION-PARAMETER-SW-COMPONENT-TYPE",
-            "ECU-ABSTRACTION-SW-COMPONENT-TYPE",
-            "NV-BLOCK-SW-COMPONENT-TYPE"
-        ]
-        
-        for elem_type in swc_elements:
-            if document.xpath(f"//{elem_type}"):
-                return True
+    def can_analyze(self, element) -> bool:
+        """Check if this analyzer can handle the element/document."""
+        # Support both ARXMLDocument and element
+        if hasattr(element, 'xpath'):
+            swc_elements = [
+                "APPLICATION-SW-COMPONENT-TYPE",
+                "COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE", 
+                "SERVICE-SW-COMPONENT-TYPE",
+                "SENSOR-ACTUATOR-SW-COMPONENT-TYPE",
+                "CALIBRATION-PARAMETER-SW-COMPONENT-TYPE",
+                "ECU-ABSTRACTION-SW-COMPONENT-TYPE",
+                "NV-BLOCK-SW-COMPONENT-TYPE"
+            ]
+            
+            # Use namespace-agnostic XPath with local-name()
+            for elem_type in swc_elements:
+                if element.xpath(f"//*[local-name()='{elem_type}']"):
+                    return True
         return False
         
     def analyze(self, document: ARXMLDocument) -> AnalysisResult:
         """Perform SWC analysis on the document."""
-        return self.analyze_safe(document)
+        import time
+        from datetime import datetime
+        from pathlib import Path
+        from ..core.analyzer.base_analyzer import AnalysisMetadata, AnalysisStatus, AnalysisResult
+        
+        start_time = time.time()
+        
+        # Run implementation
+        details = self._analyze_implementation(document)
+        
+        # Handle both ARXMLDocument and direct element
+        file_path = None
+        file_size = 0
+        if hasattr(document, 'file_path'):
+            file_path = Path(document.file_path) if document.file_path else None
+            if hasattr(document, 'get_file_size') and file_path:
+                file_size = document.get_file_size()
+        
+        # Create metadata
+        metadata = AnalysisMetadata(
+            analyzer_name=self.name,
+            analyzer_version=self.version,
+            analysis_timestamp=datetime.now(),
+            analysis_duration=time.time() - start_time,
+            file_path=file_path,
+            file_size=file_size,
+            arxml_type="SWC",
+            analysis_level=self._analysis_level,
+            status=AnalysisStatus.COMPLETED
+        )
+        
+        # Create result
+        result = AnalysisResult(metadata=metadata)
+        result.details = details
+        
+        # Generate summary
+        result.summary = {
+            "total_components": details.get("total_components", 0),
+            "total_ports": details.get("port_statistics", {}).get("total_ports", 0),
+            "total_runnables": details.get("runnable_statistics", {}).get("total_runnables", 0),
+            "interfaces_used": len(details.get("interface_usage", {}))
+        }
+        
+        return result
     
     def _analyze_implementation(self, document: ARXMLDocument) -> Dict[str, Any]:
         """Implement the actual SWC analysis logic."""
@@ -119,8 +165,17 @@ class SWCAnalyzer(BaseAnalyzer):
             ("NV-BLOCK-SW-COMPONENT-TYPE", "NV_BLOCK")
         ]
         
+        # Get namespaces from document root
+        namespaces = {}
+        # Handle both ARXMLDocument and direct element
+        root = document.root if hasattr(document, 'root') else document
+        if hasattr(root, 'nsmap') and root.nsmap:
+            if None in root.nsmap:
+                namespaces['ar'] = root.nsmap[None]
+        
         for elem_type, comp_type in swc_types:
-            swc_elements = document.xpath(f"//{elem_type}")
+            # Use local-name() to be namespace-agnostic
+            swc_elements = document.xpath(f'//*[local-name()="{elem_type}"]')
             
             for swc_elem in swc_elements:
                 swc_info = SWCInfo(
@@ -147,7 +202,8 @@ class SWCAnalyzer(BaseAnalyzer):
     def _extract_ports(self, swc_elem, port_type: str) -> List[PortInfo]:
         """Extract port information from a SWC element."""
         ports = []
-        port_elements = swc_elem.findall(f"./PORTS/{port_type}")
+        # Use xpath with local-name to be namespace-agnostic
+        port_elements = swc_elem.xpath(f'.//*[local-name()="PORTS"]/*[local-name()="{port_type}"]')
         
         for port_elem in port_elements:
             # Determine interface reference element name based on port type
@@ -158,11 +214,13 @@ class SWCAnalyzer(BaseAnalyzer):
             else:  # PR-PORT-PROTOTYPE
                 interface_ref_elem = "PROVIDED-REQUIRED-INTERFACE-TREF"
                 
-            interface_tref = port_elem.find(f".//{interface_ref_elem}")
+            # Find interface reference with namespace-agnostic xpath
+            interface_tref_list = port_elem.xpath(f'.//*[local-name()="{interface_ref_elem}"]')
             interface_ref = ""
             interface_type = ""
             
-            if interface_tref is not None:
+            if interface_tref_list:
+                interface_tref = interface_tref_list[0]
                 interface_ref = interface_tref.text if interface_tref.text else ""
                 interface_type = interface_tref.get("DEST", "")
                 
@@ -363,11 +421,19 @@ class SWCAnalyzer(BaseAnalyzer):
             "internal_behavior": swc.internal_behavior
         }
         
-    def _get_text(self, element, xpath: str) -> Optional[str]:
-        """Safely get text from an element."""
+    def _get_text(self, element, tag: str) -> Optional[str]:
+        """Safely get text from an element, namespace-agnostic."""
         if element is None:
             return None
-        found = element.find(xpath)
+        # Try direct child first
+        found = element.find(f'.//{{{element.nsmap[None]}}}{tag}') if element.nsmap and None in element.nsmap else element.find(f'.//{tag}')
+        if found is None:
+            # Try with local-name
+            found = element.xpath(f'.//*[local-name()="{tag}"]')
+            if found:
+                found = found[0]
+            else:
+                return None
         return found.text if found is not None else None
         
     def get_patterns(self) -> List[Dict[str, Any]]:

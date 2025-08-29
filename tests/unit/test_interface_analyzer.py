@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-import xml.etree.ElementTree as ET
+import lxml.etree as ET
 from unittest.mock import MagicMock, patch
 
 from arxml_analyzer.analyzers.interface_analyzer import (
@@ -169,14 +169,14 @@ class TestInterfaceAnalyzer:
     
     def test_analyzer_initialization(self, analyzer):
         """Test InterfaceAnalyzer initialization."""
-        assert analyzer.analyzer_name == "InterfaceAnalyzer"
+        assert analyzer.name == "InterfaceAnalyzer"
         assert "INTERFACE" in analyzer.supported_types
         assert "PORT-INTERFACE" in analyzer.supported_types
     
     def test_can_analyze_interface_document(self, analyzer, sample_sr_interface_xml):
         """Test can_analyze method with interface document."""
-        root = ET.fromstring(sample_sr_interface_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(sample_sr_interface_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         assert analyzer.can_analyze(doc) is True
     
@@ -196,20 +196,20 @@ class TestInterfaceAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         assert analyzer.can_analyze(doc) is False
     
     def test_analyze_sr_interface(self, analyzer, sample_sr_interface_xml):
         """Test analyzing Sender-Receiver interface."""
-        root = ET.fromstring(sample_sr_interface_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(sample_sr_interface_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         
         assert result.metadata.analyzer_name == "InterfaceAnalyzer"
-        assert result.metadata.status == AnalysisStatus.SUCCESS
+        assert result.metadata.status == AnalysisStatus.COMPLETED
         assert result.details["total_interfaces"] == 1
         
         # Check interface details
@@ -234,8 +234,8 @@ class TestInterfaceAnalyzer:
     
     def test_analyze_cs_interface(self, analyzer, sample_cs_interface_xml):
         """Test analyzing Client-Server interface."""
-        root = ET.fromstring(sample_cs_interface_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(sample_cs_interface_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         
@@ -268,8 +268,8 @@ class TestInterfaceAnalyzer:
     
     def test_interface_statistics(self, analyzer, mixed_interfaces_xml):
         """Test interface statistics calculation."""
-        root = ET.fromstring(mixed_interfaces_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(mixed_interfaces_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         stats = result.details["statistics"]
@@ -282,8 +282,8 @@ class TestInterfaceAnalyzer:
     
     def test_data_type_usage(self, analyzer, mixed_interfaces_xml):
         """Test data type usage analysis."""
-        root = ET.fromstring(mixed_interfaces_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(mixed_interfaces_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         type_usage = result.details["data_type_usage"]
@@ -298,8 +298,8 @@ class TestInterfaceAnalyzer:
     
     def test_operation_complexity(self, analyzer, sample_cs_interface_xml):
         """Test operation complexity analysis."""
-        root = ET.fromstring(sample_cs_interface_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(sample_cs_interface_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         op_complexity = result.details["operation_complexity"]
@@ -317,8 +317,8 @@ class TestInterfaceAnalyzer:
     
     def test_interface_relationships(self, analyzer, mixed_interfaces_xml):
         """Test interface relationship analysis."""
-        root = ET.fromstring(mixed_interfaces_xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(mixed_interfaces_xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         relationships = result.details["relationships"]
@@ -354,8 +354,8 @@ class TestInterfaceAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         validation = result.details["validation"]
@@ -399,8 +399,8 @@ class TestInterfaceAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         
@@ -444,8 +444,8 @@ class TestInterfaceAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
-        doc = ARXMLDocument(root, "test.arxml", {})
+        root = ET.fromstring(xml.encode('utf-8'))
+        doc = ARXMLDocument(root, None, {})
         
         result = analyzer.analyze(doc)
         

@@ -81,13 +81,49 @@ class InterfaceAnalyzer(BaseAnalyzer):
         ]
         
         for elem_type in interface_elements:
-            if document.xpath(f"//{elem_type}"):
+            # Use namespace-agnostic XPath
+            if document.xpath(f"//*[local-name()='{elem_type}']"):
                 return True
         return False
         
     def analyze(self, document: ARXMLDocument) -> AnalysisResult:
         """Perform interface analysis on the document."""
-        return self.analyze_safe(document)
+        import time
+        from datetime import datetime
+        from pathlib import Path
+        from ..core.analyzer.base_analyzer import AnalysisMetadata, AnalysisStatus, AnalysisResult
+        
+        start_time = time.time()
+        
+        # Run implementation
+        details = self._analyze_implementation(document)
+        
+        # Create metadata
+        metadata = AnalysisMetadata(
+            analyzer_name=self.name,
+            analyzer_version=self.version,
+            analysis_timestamp=datetime.now(),
+            analysis_duration=time.time() - start_time,
+            file_path=Path(document.file_path) if document.file_path else None,
+            file_size=document.get_file_size() if hasattr(document, 'get_file_size') and document.file_path else 0,
+            arxml_type="INTERFACE",
+            analysis_level=self._analysis_level,
+            status=AnalysisStatus.COMPLETED
+        )
+        
+        # Create result
+        result = AnalysisResult(metadata=metadata)
+        result.details = details
+        
+        # Generate summary
+        result.summary = {
+            "total_interfaces": details.get("total_interfaces", 0),
+            "interface_types": details.get("statistics", {}).get("interface_types", {}),
+            "unique_data_types": details.get("data_type_usage", {}).get("unique_types", 0),
+            "total_operations": details.get("operation_complexity", {}).get("total_operations", 0)
+        }
+        
+        return result
     
     def _analyze_implementation(self, document: ARXMLDocument) -> Dict[str, Any]:
         """Implement the actual interface analysis logic."""
@@ -146,7 +182,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_sr_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract Sender-Receiver interfaces."""
         interfaces = []
-        sr_elements = document.xpath("//SENDER-RECEIVER-INTERFACE")
+        sr_elements = document.xpath("//*[local-name()='SENDER-RECEIVER-INTERFACE']")
         
         for sr_elem in sr_elements:
             interface = InterfaceInfo(
@@ -159,7 +195,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(sr_elem)
             
             # Extract data elements
-            data_elements = sr_elem.findall(".//DATA-ELEMENTS/VARIABLE-DATA-PROTOTYPE")
+            data_elements = sr_elem.xpath(".//*[local-name()='DATA-ELEMENTS']/*[local-name()='VARIABLE-DATA-PROTOTYPE']")
             for de_elem in data_elements:
                 data_element = DataElementInfo(
                     name=self._get_text(de_elem, "SHORT-NAME"),
@@ -168,14 +204,14 @@ class InterfaceAnalyzer(BaseAnalyzer):
                 )
                 
                 # Get type reference
-                type_tref = de_elem.find(".//TYPE-TREF")
-                if type_tref is not None and type_tref.text:
-                    data_element.type_ref = type_tref.text
+                type_trefs = de_elem.xpath(".//*[local-name()='TYPE-TREF']")
+                if type_trefs and type_trefs[0].text:
+                    data_element.type_ref = type_trefs[0].text
                     
                 # Get init value if present
-                init_value_elem = de_elem.find(".//INIT-VALUE//VALUE")
-                if init_value_elem is not None:
-                    data_element.init_value = init_value_elem.text
+                init_value_elems = de_elem.xpath(".//*[local-name()='INIT-VALUE']//*[local-name()='VALUE']")
+                if init_value_elems:
+                    data_element.init_value = init_value_elems[0].text
                     
                 # Check if queued
                 is_queued = self._get_text(de_elem, "IS-QUEUED") == "true"
@@ -188,7 +224,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
                 interface.data_elements.append(data_element)
                 
             # Extract invalidation policies
-            inv_policies = sr_elem.findall(".//INVALIDATION-POLICYS/INVALIDATION-POLICY")
+            inv_policies = sr_elem.xpath(".//*[local-name()='INVALIDATION-POLICYS']/*[local-name()='INVALIDATION-POLICY']")
             for policy in inv_policies:
                 policy_info = {
                     "data_element": self._get_text(policy, ".//DATA-ELEMENT-REF"),
@@ -203,7 +239,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_cs_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract Client-Server interfaces."""
         interfaces = []
-        cs_elements = document.xpath("//CLIENT-SERVER-INTERFACE")
+        cs_elements = document.xpath("//*[local-name()='CLIENT-SERVER-INTERFACE']")
         
         for cs_elem in cs_elements:
             interface = InterfaceInfo(
@@ -215,14 +251,14 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(cs_elem)
             
             # Extract operations
-            operations = cs_elem.findall(".//OPERATIONS/CLIENT-SERVER-OPERATION")
+            operations = cs_elem.xpath(".//*[local-name()='OPERATIONS']/*[local-name()='CLIENT-SERVER-OPERATION']")
             for op_elem in operations:
                 operation = OperationInfo(
                     name=self._get_text(op_elem, "SHORT-NAME")
                 )
                 
                 # Extract arguments
-                arguments = op_elem.findall(".//ARGUMENTS/ARGUMENT-DATA-PROTOTYPE")
+                arguments = op_elem.xpath(".//*[local-name()='ARGUMENTS']/*[local-name()='ARGUMENT-DATA-PROTOTYPE']")
                 for arg_elem in arguments:
                     arg_info = {
                         "name": self._get_text(arg_elem, "SHORT-NAME"),
@@ -233,12 +269,12 @@ class InterfaceAnalyzer(BaseAnalyzer):
                     operation.arguments.append(arg_info)
                     
                 # Extract return type (if exists)
-                return_elem = op_elem.find(".//RETURN/VARIABLE-DATA-PROTOTYPE")
-                if return_elem is not None:
-                    operation.return_type = self._get_text(return_elem, ".//TYPE-TREF")
+                return_elems = op_elem.xpath(".//*[local-name()='RETURN']/*[local-name()='VARIABLE-DATA-PROTOTYPE']")
+                if return_elems:
+                    operation.return_type = self._get_text(return_elems[0], ".//TYPE-TREF")
                     
                 # Extract possible errors
-                errors = op_elem.findall(".//POSSIBLE-ERROR-REFS/POSSIBLE-ERROR-REF")
+                errors = op_elem.xpath(".//*[local-name()='POSSIBLE-ERROR-REFS']/*[local-name()='POSSIBLE-ERROR-REF']")
                 for error_elem in errors:
                     if error_elem.text:
                         operation.possible_errors.append(error_elem.text)
@@ -252,7 +288,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_ms_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract Mode-Switch interfaces."""
         interfaces = []
-        ms_elements = document.xpath("//MODE-SWITCH-INTERFACE")
+        ms_elements = document.xpath("//*[local-name()='MODE-SWITCH-INTERFACE']")
         
         for ms_elem in ms_elements:
             interface = InterfaceInfo(
@@ -264,7 +300,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(ms_elem)
             
             # Extract mode groups
-            mode_groups = ms_elem.findall(".//MODE-GROUP")
+            mode_groups = ms_elem.xpath(".//*[local-name()='MODE-GROUP']")
             for mg_elem in mode_groups:
                 mode_group = ModeGroupInfo(
                     name=self._get_text(mg_elem, "SHORT-NAME"),
@@ -283,7 +319,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_param_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract Parameter interfaces."""
         interfaces = []
-        param_elements = document.xpath("//PARAMETER-INTERFACE")
+        param_elements = document.xpath("//*[local-name()='PARAMETER-INTERFACE']")
         
         for param_elem in param_elements:
             interface = InterfaceInfo(
@@ -295,7 +331,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(param_elem)
             
             # Extract parameters as data elements
-            parameters = param_elem.findall(".//PARAMETERS/PARAMETER-DATA-PROTOTYPE")
+            parameters = param_elem.xpath(".//*[local-name()='PARAMETERS']/*[local-name()='PARAMETER-DATA-PROTOTYPE']")
             for p_elem in parameters:
                 data_element = DataElementInfo(
                     name=self._get_text(p_elem, "SHORT-NAME"),
@@ -304,9 +340,9 @@ class InterfaceAnalyzer(BaseAnalyzer):
                 )
                 
                 # Get init value if present
-                init_value_elem = p_elem.find(".//INIT-VALUE//VALUE")
-                if init_value_elem is not None:
-                    data_element.init_value = init_value_elem.text
+                init_value_elems = p_elem.xpath(".//*[local-name()='INIT-VALUE']//*[local-name()='VALUE']")
+                if init_value_elems:
+                    data_element.init_value = init_value_elems[0].text
                     
                 interface.data_elements.append(data_element)
                 
@@ -317,7 +353,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_nv_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract NV-Data interfaces."""
         interfaces = []
-        nv_elements = document.xpath("//NV-DATA-INTERFACE")
+        nv_elements = document.xpath("//*[local-name()='NV-DATA-INTERFACE']")
         
         for nv_elem in nv_elements:
             interface = InterfaceInfo(
@@ -329,7 +365,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(nv_elem)
             
             # Extract NV data
-            nv_data = nv_elem.findall(".//NV-DATAS/VARIABLE-DATA-PROTOTYPE")
+            nv_data = nv_elem.xpath(".//*[local-name()='NV-DATAS']/*[local-name()='VARIABLE-DATA-PROTOTYPE']")
             for nv_data_elem in nv_data:
                 data_element = DataElementInfo(
                     name=self._get_text(nv_data_elem, "SHORT-NAME"),
@@ -345,7 +381,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
     def _extract_trigger_interfaces(self, document: ARXMLDocument) -> List[InterfaceInfo]:
         """Extract Trigger interfaces."""
         interfaces = []
-        trigger_elements = document.xpath("//TRIGGER-INTERFACE")
+        trigger_elements = document.xpath("//*[local-name()='TRIGGER-INTERFACE']")
         
         for trigger_elem in trigger_elements:
             interface = InterfaceInfo(
@@ -357,7 +393,7 @@ class InterfaceAnalyzer(BaseAnalyzer):
             interface.package_path = self._get_package_path(trigger_elem)
             
             # Extract triggers as data elements (simplified)
-            triggers = trigger_elem.findall(".//TRIGGERS/TRIGGER")
+            triggers = trigger_elem.xpath(".//*[local-name()='TRIGGERS']/*[local-name()='TRIGGER']")
             for t_elem in triggers:
                 data_element = DataElementInfo(
                     name=self._get_text(t_elem, "SHORT-NAME"),
@@ -594,15 +630,31 @@ class InterfaceAnalyzer(BaseAnalyzer):
         """Safely get text from an element."""
         if element is None:
             return None
-        found = element.find(xpath)
-        return found.text if found is not None else None
+        # Use XPath with local-name() for namespace-agnostic search
+        if xpath == "SHORT-NAME":
+            results = element.xpath(f"*[local-name()='SHORT-NAME']")
+        elif xpath.startswith(".//"):
+            tag = xpath.split('/')[-1]
+            results = element.xpath(f".//*[local-name()='{tag}']")
+        else:
+            tag = xpath.split('/')[-1] if '/' in xpath else xpath
+            results = element.xpath(f"*[local-name()='{tag}']")
+        
+        return results[0].text if results else None
         
     def _get_attr(self, element, xpath: str, attr: str) -> Optional[str]:
         """Safely get attribute from an element."""
         if element is None:
             return None
-        found = element.find(xpath)
-        return found.get(attr) if found is not None else None
+        # Use XPath with local-name() for namespace-agnostic search
+        if xpath.startswith(".//"):
+            tag = xpath.split('/')[-1]
+            results = element.xpath(f".//*[local-name()='{tag}']")
+        else:
+            tag = xpath.split('/')[-1] if '/' in xpath else xpath
+            results = element.xpath(f"*[local-name()='{tag}']")
+        
+        return results[0].get(attr) if results else None
         
     def _get_package_path(self, element) -> Optional[str]:
         """Get the package path of an element."""
@@ -610,10 +662,12 @@ class InterfaceAnalyzer(BaseAnalyzer):
         parent = element.getparent()
         
         while parent is not None:
-            if parent.tag.endswith("AR-PACKAGE"):
-                name_elem = parent.find("SHORT-NAME")
-                if name_elem is not None and name_elem.text:
-                    packages.insert(0, name_elem.text)
+            # Check for AR-PACKAGE in a namespace-agnostic way
+            if parent.tag.endswith("AR-PACKAGE") or parent.tag.split('}')[-1] == "AR-PACKAGE":
+                # Find SHORT-NAME in a namespace-agnostic way
+                name_elems = parent.xpath("*[local-name()='SHORT-NAME']")
+                if name_elems and name_elems[0].text:
+                    packages.insert(0, name_elems[0].text)
             parent = parent.getparent()
             
         return "/" + "/".join(packages) if packages else None

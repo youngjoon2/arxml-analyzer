@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-import xml.etree.ElementTree as ET
+import lxml.etree as ET
 from unittest.mock import MagicMock, patch
 
 from arxml_analyzer.analyzers.swc_analyzer import (
@@ -133,13 +133,13 @@ class TestSWCAnalyzer:
     
     def test_analyzer_initialization(self, analyzer):
         """Test SWCAnalyzer initialization."""
-        assert analyzer.analyzer_name == "SWCAnalyzer"
+        assert analyzer.name == "SWCAnalyzer"
         assert "SWC" in analyzer.supported_types
         assert "APPLICATION-SW-COMPONENT-TYPE" in analyzer.supported_types
     
     def test_can_analyze_swc_document(self, analyzer, sample_swc_xml):
         """Test can_analyze method with SWC document."""
-        root = ET.fromstring(sample_swc_xml)
+        root = ET.fromstring(sample_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         assert analyzer.can_analyze(doc) is True
@@ -160,14 +160,14 @@ class TestSWCAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
+        root = ET.fromstring(xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         assert analyzer.can_analyze(doc) is False
     
     def test_analyze_simple_swc(self, analyzer, sample_swc_xml):
         """Test analyzing a simple SWC."""
-        root = ET.fromstring(sample_swc_xml)
+        root = ET.fromstring(sample_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -197,7 +197,7 @@ class TestSWCAnalyzer:
     
     def test_analyze_multiple_components(self, analyzer, complex_swc_xml):
         """Test analyzing multiple SWC components."""
-        root = ET.fromstring(complex_swc_xml)
+        root = ET.fromstring(complex_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -216,7 +216,7 @@ class TestSWCAnalyzer:
     
     def test_port_statistics(self, analyzer, complex_swc_xml):
         """Test port statistics calculation."""
-        root = ET.fromstring(complex_swc_xml)
+        root = ET.fromstring(complex_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -230,7 +230,7 @@ class TestSWCAnalyzer:
     
     def test_runnable_statistics(self, analyzer, complex_swc_xml):
         """Test runnable statistics calculation."""
-        root = ET.fromstring(complex_swc_xml)
+        root = ET.fromstring(complex_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -244,7 +244,7 @@ class TestSWCAnalyzer:
     
     def test_interface_usage_analysis(self, analyzer, complex_swc_xml):
         """Test interface usage analysis."""
-        root = ET.fromstring(complex_swc_xml)
+        root = ET.fromstring(complex_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -259,7 +259,7 @@ class TestSWCAnalyzer:
     
     def test_complexity_metrics(self, analyzer, sample_swc_xml):
         """Test complexity metrics calculation."""
-        root = ET.fromstring(sample_swc_xml)
+        root = ET.fromstring(sample_swc_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)
@@ -296,7 +296,7 @@ class TestSWCAnalyzer:
             <INVALID>Invalid content</INVALID>
         </AUTOSAR>"""
         
-        root = ET.fromstring(invalid_xml)
+        root = ET.fromstring(invalid_xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         # Should not raise error but return empty results
@@ -327,7 +327,7 @@ class TestSWCAnalyzer:
             </AR-PACKAGES>
         </AUTOSAR>"""
         
-        root = ET.fromstring(xml)
+        root = ET.fromstring(xml.encode('utf-8'))
         doc = ARXMLDocument(root, "test.arxml", {})
         
         result = analyzer.analyze(doc)

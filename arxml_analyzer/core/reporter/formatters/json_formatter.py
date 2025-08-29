@@ -53,7 +53,7 @@ class JSONFormatter(BaseFormatter):
             json.dump(filtered_result, f, indent=self.options.indent, ensure_ascii=False)
     
     def _serialize_dates(self, obj: Any) -> Any:
-        """Recursively serialize datetime objects to ISO format strings.
+        """Recursively serialize datetime objects to ISO format strings and enums to values.
         
         Args:
             obj: Object to serialize
@@ -61,11 +61,20 @@ class JSONFormatter(BaseFormatter):
         Returns:
             Serialized object
         """
+        from enum import Enum
+        from pathlib import Path
+        
         if isinstance(obj, datetime):
             return obj.isoformat()
+        elif isinstance(obj, Path):
+            return str(obj)
+        elif isinstance(obj, Enum):
+            return obj.value
         elif isinstance(obj, dict):
             return {key: self._serialize_dates(value) for key, value in obj.items()}
         elif isinstance(obj, list):
+            return [self._serialize_dates(item) for item in obj]
+        elif isinstance(obj, tuple):
             return [self._serialize_dates(item) for item in obj]
         else:
             return obj
